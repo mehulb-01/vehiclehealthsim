@@ -1,0 +1,106 @@
+{
+  "feature_order": [
+    "engine_temp",
+    "rpm",
+    "oil_pressure",
+    "vibration",
+    "battery_voltage",
+    "coolant_temp",
+    "fuel_consumption",
+    "operating_hours"
+  ],
+  "sensors": {
+    "engine_temp": {
+      "safe_low": 80,
+      "safe_high": 105,
+      "danger_low": 60,
+      "danger_high": 125,
+      "unit": "\u00b0C"
+    },
+    "rpm": {
+      "safe_low": 700,
+      "safe_high": 3200,
+      "danger_low": 500,
+      "danger_high": 6000,
+      "unit": "rpm"
+    },
+    "oil_pressure": {
+      "safe_low": 25,
+      "safe_high": 65,
+      "danger_low": 10,
+      "danger_high": 80,
+      "unit": "psi"
+    },
+    "vibration": {
+      "safe_low": 0.2,
+      "safe_high": 2.5,
+      "danger_low": 0,
+      "danger_high": 7.0,
+      "unit": "mm/s"
+    },
+    "battery_voltage": {
+      "safe_low": 12.4,
+      "safe_high": 14.4,
+      "danger_low": 10.5,
+      "danger_high": 15.5,
+      "unit": "V"
+    },
+    "coolant_temp": {
+      "safe_low": 80,
+      "safe_high": 100,
+      "danger_low": 60,
+      "danger_high": 120,
+      "unit": "\u00b0C"
+    },
+    "fuel_consumption": {
+      "safe_low": 6,
+      "safe_high": 10,
+      "danger_low": 4,
+      "danger_high": 16,
+      "unit": "L/100km"
+    },
+    "vehicle_speed": {
+      "safe_low": 0,
+      "safe_high": 120,
+      "danger_low": 0,
+      "danger_high": 180,
+      "unit": "km/h"
+    },
+    "operating_hours": {
+      "safe_low": 0,
+      "safe_high": 4000,
+      "danger_low": 0,
+      "danger_high": 9000,
+      "unit": "hrs"
+    }
+  },
+  "weights": {
+    "engine_temp": 1.3334,
+    "rpm": 0.406,
+    "oil_pressure": 1.5304,
+    "vibration": 1.001,
+    "battery_voltage": 1.2521,
+    "coolant_temp": 1.1556,
+    "fuel_consumption": 1.235,
+    "operating_hours": 0.6542
+  },
+  "intercept": -3.3102,
+  "metrics": [
+    {
+      "model": "LogisticRegression",
+      "accuracy": 0.9307,
+      "precision": 0.7188,
+      "recall": 0.276,
+      "f1": 0.3988,
+      "roc_auc": 0.7842
+    },
+    {
+      "model": "RandomForest",
+      "accuracy": 0.9287,
+      "precision": 0.7143,
+      "recall": 0.24,
+      "f1": 0.3593,
+      "roc_auc": 0.77
+    }
+  ]
+}

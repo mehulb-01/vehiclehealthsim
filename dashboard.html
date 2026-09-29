@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vehicle Health Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e14; --panel:#10161f; --panel2:#141b26; --line:#1e2733; --text:#dce4ee; --sub:#7c8aa0;
+  --chrome:#4d6a8a; --green:#34d399; --yellow:#f2b94b; --red:#f0576a;
+  --g:52,211,153; --y:242,185,75; --r:240,87,106;
+  --gauge-bg:#0a0a0a; --gauge-glow:#ff000033; --gauge-tick:#ffffff; --gauge-needle:#ff3333;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(ellipse at 50% -10%,#131c29 0%,var(--bg) 55%);color:var(--text);
+  font-family:'Space Grotesk',sans-serif;min-height:100%;
+  padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0)}
+.num{font-family:'JetBrains Mono',monospace}
+.wrap{max-width:1140px;margin:0 auto;padding:22px 20px 60px}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 1px var(--green)}
+.brand h1{font-size:18px;margin:0;font-weight:600}
+.brand p{margin:1px 0 0;color:var(--sub);font-size:12px}
+.pill{display:flex;align-items:center;gap:8px;padding:8px 15px;border-radius:999px;background:var(--panel);
+  border:1px solid var(--line);font-size:12.5px;color:var(--sub)}
+.pill b{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:12.5px}
+.controls{display:flex;gap:8px}
+button{font-family:inherit;font-size:12.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+  border-radius:9px;padding:8px 13px;cursor:pointer}
+button:hover{border-color:#33475f}
+
+.window{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:20px;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 0 16px -5px rgba(var(--glow),.4);
+  transition:box-shadow .5s ease}
+.window.gauge-panel{background:radial-gradient(circle at 50% 50%,var(--gauge-bg),#000000);
+  border:2px solid #333;box-shadow:0 0 20px var(--gauge-glow),inset 0 0 30px rgba(255,0,0,0.1)}
+
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.hero .window{padding:25px 18px 30px;display:flex;flex-direction:column;align-items:center}
+.hero h2{margin:0 0 15px;font-size:12px;letter-spacing:.2px;color:var(--sub);font-weight:600}
+.gauge{width:208px;height:213px}
+.readout{text-align:center;margin-top:2px}
+.readout .rv{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700}
+.readout .ru{font-size:12px;color:var(--sub);margin-top:2px}
+.track-bg{fill:none;stroke:#1a1a1a;stroke-width:12;stroke-linecap:round}
+.track-val{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke .4s}
+.tick{stroke:#ffffff;stroke-width:2;opacity:1}
+.needle{stroke-linecap:round;stroke-width:3;transition:transform .5s cubic-bezier(.4,1.4,.6,1),stroke .4s;
+  stroke:#ff3333;filter:drop-shadow(0 0 3px #ff3333)}
+.hub{transition:fill .4s;fill:#1a1a1a}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}}
+.tile{padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.tile .lbl{font-size:11.5px;color:var(--sub);margin-bottom:2px;white-space:nowrap}
+.tile .mini{width:70px;height:70px;margin:2px 0}
+.tile .mt-bg{fill:none;stroke:#1a1a1a;stroke-width:6;stroke-linecap:round}
+.tile .mt-val{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke .4s,d .3s}
+.tile .val{font-size:14px;font-weight:700;margin-top:2px}
+.tile .val span{font-size:10px;color:var(--sub);font-weight:400;margin-left:2px}
+.tile input[type=range]{width:100%;margin-top:9px;accent-color:#4d6a8a;height:14px}
+
+.warning-lights{display:flex;gap:15px;margin-top:10px}
+.warning-light{width:30px;height:30px;border-radius:50%;background:#1a1a1a;border:2px solid #333;
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#666;
+  transition:all 0.3s ease}
+.warning-light.active{color:#ff0;border-color:#ff0;box-shadow:0 0 10px #ff0,0 0 20px #ff0333;
+  background:rgba(255,255,0,0.1)}
+.warning-light.active.red{color:#f00;border-color:#f00;box-shadow:0 0 10px #f00,0 0 20px #ff0000;
+  background:rgba(255,0,0,0.1)}
+
+.lower{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+@media(max-width:860px){.lower{grid-template-columns:1fr}}
+.window.pad{padding:17px 19px}
+.lower h3{margin:0 0 10px;font-size:12.5px;color:var(--sub);font-weight:600}
+.factor{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.factor:last-child{border-bottom:none}
+.factor .f-name{font-size:13px}
+.factor .f-desc{font-size:11.5px;color:var(--sub);margin-top:2px}
+.factor .f-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13.5px;white-space:nowrap}
+.about{font-size:12.5px;line-height:1.6;color:var(--text)}
+.note{color:var(--sub);font-size:11px;margin-top:12px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="dot" id="statusDot"></span>
+      <div><h1>Vehicle Health Monitor</h1><p>Predictive maintenance &middot; logistic-regression failure model</p></div>
+    </div>
+    <div class="controls">
+      <div class="pill">Status&nbsp;<b id="statusText">HEALTHY</b></div>
+      <button id="toggleBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="window gauge-panel" id="healthWin" style="--glow:var(--g)">
+      <h2>Vehicle health</h2>
+      <svg class="gauge" id="gauge_health" viewBox="0 0 208 213"></svg>
+      <div class="readout"><span class="rv num" id="healthVal">100</span><div class="ru">out of 100</div></div>
+    </div>
+    <div class="window gauge-panel" id="failWin" style="--glow:var(--g)">
+      <h2>Failure probability</h2>
+      <svg class="gauge" id="gauge_fail" viewBox="0 0 208 213"></svg>
+      <div class="readout"><span class="rv num" id="failVal">0</span><div class="ru">% within service window</div></div>
+    </div>
+  </div>
+  
+  <div class="warning-lights">
+    <div class="warning-light" id="brakeLight">(P)</div>
+    <div class="warning-light" id="warningLight">(!)</div>
+    <div class="warning-light" id="engineLight">⚙</div>
+    <div class="warning-light" id="oilLight">🛢</div>
+  </div>
+
+  <div class="grid" id="tileGrid"></div>
+
+  <div class="lower">
+    <div class="window pad">
+      <h3>Major contributing factors</h3>
+      <div id="factorList"></div>
+    </div>
+    <div class="window pad">
+      <h3>About this model</h3>
+      <div class="about">
+        Each sensor is scored 0&ndash;1 against its safe operating band, then a logistic regression
+        (trained on 12,000 simulated duty cycles, ROC&#8209;AUC 0.78) turns those scores into a failure
+        probability. Health score is a separate, simpler average of the same risk values, so the two
+        numbers can disagree &mdash; the model is meant to flag risk before the vehicle visibly "feels" unhealthy.
+      </div>
+      <div class="note">Drag any slider for manual control (pauses the simulation). Vehicle speed is shown for context only and is not used by the model.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODEL = {
+  intercept: -3.3102,
+  sensors: [
+    {key:"engine_temp",label:"Engine temp",unit:"°C",lo:80,hi:105,dlo:60,dhi:125,weight:1.3334,decimals:0},
+    {key:"rpm",label:"RPM",unit:"rpm",lo:700,hi:3200,dlo:500,dhi:6000,weight:0.406,decimals:0},
+    {key:"oil_pressure",label:"Oil pressure",unit:"psi",lo:25,hi:65,dlo:10,dhi:80,weight:1.5304,decimals:0},
+    {key:"vibration",label:"Vibration",unit:"mm/s",lo:0.2,hi:2.5,dlo:0,dhi:7.0,weight:1.001,decimals:1},
+    {key:"battery_voltage",label:"Battery",unit:"V",lo:12.4,hi:14.4,dlo:10.5,dhi:15.5,weight:1.2521,decimals:1},
+    {key:"coolant_temp",label:"Coolant temp",unit:"°C",lo:80,hi:100,dlo:60,dhi:120,weight:1.1556,decimals:0},
+    {key:"fuel_consumption",label:"Fuel use",unit:"L/100km",lo:6,hi:10,dlo:4,dhi:16,weight:1.235,decimals:1},
+    {key:"vehicle_speed",label:"Speed",unit:"km/h",lo:0,hi:120,dlo:0,dhi:180,weight:0,decimals:0},
+    {key:"operating_hours",label:"Operating hrs",unit:"hrs",lo:0,hi:4000,dlo:0,dhi:9000,weight:0.6542,decimals:0},
+  ]
+};
+const NS="http://www.w3.org/2000/svg";
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const CX=104, CY=106, R=85, START=-90, END=90, SPAN=180;
+
+function pt(angleDeg,r,cx=CX,cy=CY){
+  const a=angleDeg*Math.PI/180;
+  return {x:cx + r*Math.sin(a), y:cy - r*Math.cos(a)};
+}
+function arcPath(a0,a1,r,cx=CX,cy=CY){
+  const p0=pt(a0,r,cx,cy), p1=pt(a1,r,cx,cy);
+  const large = (a1-a0) > 180 ? 1 : 0;
+  return `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
+}
+function pctToAngle(pct){ return START + clamp(pct,0,100)/100*SPAN; }
+function el(tag,attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+
+function buildHeroGauge(svg){
+  const gaugeGroup = el('g',{transform:'translate(0, 10)'});
+  svg.appendChild(gaugeGroup);
+  
+  gaugeGroup.appendChild(el('path',{d:arcPath(START,END,R),class:'track-bg'}));
+  const valArc=el('path',{class:'track-val',d:arcPath(START,START,R)});
+  gaugeGroup.appendChild(valArc);
+  
+  // Add major and minor tick marks like a real car gauge
+  for(let i=0; i<=10; i++){
+    const pct = i*10;
+    const a=pctToAngle(pct);
+    const p1=pt(a,R+12), p2=pt(a,R+22);
+    const tick=el('line',{x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,class:'tick'});
+    tick.style.strokeWidth='3';
+    tick.style.stroke='#ffffff';
+    gaugeGroup.appendChild(tick);
+    
+    // Add numbers for major ticks
+    const numPt=pt(a,R+35);
+    const text=el('text',{x:numPt.x,y:numPt.y+5,'text-anchor':'middle','font-size':'16','fill':'#ffffff','font-weight':'bold','text-shadow':'0 0 3px rgba(255,255,255,0.5)'});
+    text.textContent = pct;
+    gaugeGroup.appendChild(text);
+    
+    // Add minor ticks between major ticks
+    if(i<10){
+      for(let j=1; j<5; j++){
+        const minorPct = pct + j*2;
+        const minorA=pctToAngle(minorPct);
+        const minorP1=pt(minorA,R+12), minorP2=pt(minorA,R+18);
+        const minorTick=el('line',{x1:minorP1.x,y1:minorP1.y,x2:minorP2.x,y2:minorP2.y,class:'tick'});
+        minorTick.style.strokeWidth='2';
+        minorTick.style.stroke='#ffffff';
+        minorTick.style.opacity='0.8';
+        gaugeGroup.appendChild(minorTick);
+      }
+    }
+  }
+  
+  const tip=pt(START,65);
+  const needle=el('line',{x1:CX,y1:CY,x2:tip.x,y2:tip.y,class:'needle',
+    style:`transform-origin:${CX}px ${CY}px;transform:rotate(0deg)`});
+  gaugeGroup.appendChild(needle);
+  gaugeGroup.appendChild(el('circle',{cx:CX,cy:CY,r:6,class:'hub'}));
+  return {valArc,needle,hub:gaugeGroup.querySelector('.hub')};
+}
+function buildTileGauge(svg){
+  const tileCX = 35, tileCY = 35, tileR = 20; // Smaller dimensions for tile gauges
+  svg.appendChild(el('path',{d:arcPath(START,END,tileR,tileCX,tileCY),class:'mt-bg'}));
+  const valArc=el('path',{class:'mt-val',d:arcPath(START,START,tileR,tileCX,tileCY)});
+  svg.appendChild(valArc);
+  return {valArc};
+}
+function colorOf(c){ return c==='g'?'var(--green)':c==='y'?'var(--yellow)':'var(--red)'; }
+function glowOf(c){ return c==='g'?'var(--g)':c==='y'?'var(--y)':'var(--r)'; }
+function zoneOfPct(pct,inverted){
+  // inverted: higher value = worse (failure prob, tile risk). non-inverted: higher = better (health)
+  const p = inverted ? pct : 100-pct;
+  return p<25 ? 'g' : p<55 ? 'y' : 'r';
+}
+
+const risk=(v,s)=> v<s.lo ? clamp((s.lo-v)/Math.max(s.lo-s.dlo,1e-6),0,1.4)
+                  : v>s.hi ? clamp((v-s.hi)/Math.max(s.dhi-s.hi,1e-6),0,1.4) : 0;
+
+let values={}, targets={}, playing=true;
+MODEL.sensors.forEach(s=>{ values[s.key]=(s.lo+s.hi)/2; targets[s.key]=values[s.key]; });
+
+const healthGaugeEls = buildHeroGauge(document.getElementById('gauge_health'));
+const failGaugeEls = buildHeroGauge(document.getElementById('gauge_fail'));
+
+const grid=document.getElementById('tileGrid');
+const tileEls={};
+MODEL.sensors.forEach(s=>{
+  const div=document.createElement('div');
+  div.className='window tile'; div.style.setProperty('--glow','var(--g)');
+  div.innerHTML=`
+    <div class="lbl">${s.label}</div>
+    <svg class="mini" viewBox="0 0 70 70" id="mini_${s.key}"></svg>
+    <div class="val"><span class="num" id="v_${s.key}"></span><span>${s.unit}</span></div>
+    <input type="range" min="${s.dlo}" max="${s.dhi}" step="${s.decimals?0.1:1}" id="sl_${s.key}">`;
+  grid.appendChild(div);
+  tileEls[s.key]=buildTileGauge(div.querySelector('svg'));
+  div.querySelector('input').addEventListener('input',e=>{
+    playing=false; document.getElementById('toggleBtn').textContent='Resume';
+    values[s.key]=parseFloat(e.target.value); render();
+  });
+});
+
+function setGaugeValue(g,pct,zone,useTileR=false){
+  const r = useTileR ? 20 : R;
+  const cx = useTileR ? 35 : CX;
+  const cy = useTileR ? 35 : CY;
+  g.valArc.setAttribute('d', arcPath(START, pctToAngle(pct), r, cx, cy));
+  g.valArc.style.stroke = colorOf(zone);
+  if(g.needle){ g.needle.style.transform = `rotate(${pctToAngle(pct)-START}deg)`; g.needle.style.stroke = colorOf(zone); }
+  if(g.hub) g.hub.style.fill = colorOf(zone);
+}
+
+function render(){
+  let sumRisk=0, weightedLogit=MODEL.intercept, factors=[];
+  MODEL.sensors.forEach(s=>{
+    const r=risk(values[s.key],s);
+    if(s.key!=='vehicle_speed') sumRisk+=Math.min(r,1);
+    weightedLogit += s.weight*r;
+    const tz = r<0.15?'g':r<0.5?'y':'r';
+    const win=document.getElementById(`sl_${s.key}`).closest('.window');
+    win.style.setProperty('--glow',glowOf(tz));
+    document.getElementById(`v_${s.key}`).textContent = values[s.key].toFixed(s.decimals);
+    setGaugeValue(tileEls[s.key], clamp(r*100,0,100), tz, true);
+    document.getElementById(`sl_${s.key}`).value = values[s.key];
+    if(r>0.08 && s.key!=='vehicle_speed'){
+      const dir = values[s.key] < s.lo ? 'below' : 'above';
+      factors.push({name:s.label, weight:s.weight*r,
+        desc:`${values[s.key].toFixed(s.decimals)} ${s.unit} — ${Math.round(r*100)}% ${dir} the safe band`});
+    }
+  });
+  const failPct = clamp(100/(1+Math.exp(-weightedLogit)),0,100);
+  const healthPct = clamp(100-(sumRisk/(MODEL.sensors.length-1))*100,0,100);
+
+  const hZone = zoneOfPct(healthPct,false);
+  setGaugeValue(healthGaugeEls, healthPct, hZone, false);
+  document.getElementById('healthVal').textContent = Math.round(healthPct);
+  document.getElementById('healthVal').style.color = colorOf(hZone);
+  document.getElementById('healthWin').style.setProperty('--glow',glowOf(hZone));
+
+  const fZone = zoneOfPct(failPct,true);
+  setGaugeValue(failGaugeEls, failPct, fZone, false);
+  document.getElementById('failVal').textContent = Math.round(failPct);
+  document.getElementById('failVal').style.color = colorOf(fZone);
+  document.getElementById('failWin').style.setProperty('--glow',glowOf(fZone));
+
+  const statusWord = fZone==='g'?'HEALTHY':fZone==='y'?'MODERATE':'WARNING';
+  document.getElementById('statusText').textContent=statusWord;
+  document.getElementById('statusText').style.color=colorOf(fZone);
+  document.getElementById('statusDot').style.background=colorOf(fZone);
+  document.getElementById('statusDot').style.boxShadow=`0 0 8px 1px ${colorOf(fZone)}`;
+
+  // Update warning lights based on sensor values
+  const brakeLight = document.getElementById('brakeLight');
+  const warningLight = document.getElementById('warningLight');
+  const engineLight = document.getElementById('engineLight');
+  const oilLight = document.getElementById('oilLight');
+  
+  // Reset all lights
+  [brakeLight, warningLight, engineLight, oilLight].forEach(l => {
+    l.classList.remove('active', 'red');
+  });
+  
+  // Activate lights based on conditions
+  if(values['vehicle_speed'] === 0 && Math.random() < 0.3) {
+    brakeLight.classList.add('active');
+  }
+  
+  if(fZone === 'r') {
+    warningLight.classList.add('active', 'red');
+  } else if(fZone === 'y') {
+    warningLight.classList.add('active');
+  }
+  
+  const engineSensor = MODEL.sensors.find(s=>s.key==='engine_temp');
+  const oilSensor = MODEL.sensors.find(s=>s.key==='oil_pressure');
+  
+  if(risk(values['engine_temp'], engineSensor) > 0.5) {
+    engineLight.classList.add('active', 'red');
+  }
+  
+  if(risk(values['oil_pressure'], oilSensor) > 0.5) {
+    oilLight.classList.add('active', 'red');
+  }
+
+  factors.sort((a,b)=>b.weight-a.weight);
+  const list=document.getElementById('factorList');
+  list.innerHTML = factors.length ? factors.slice(0,5).map((f,i)=>`
+    <div class="factor"><div><div class="f-name">${i+1}. ${f.name}</div>
+    <div class="f-desc">${f.desc}</div></div>
+    <div class="f-val" style="color:${colorOf(f.weight>0.5?'r':f.weight>0.2?'y':'g')}">+${f.weight.toFixed(2)}</div></div>`).join('')
+    : `<div class="note">All sensors within their safe operating band — no significant contributing factors.</div>`;
+}
+
+function stepSim(){
+  MODEL.sensors.forEach(s=>{
+    if(Math.random()<0.02) targets[s.key]=s.dlo+Math.random()*(s.dhi-s.dlo);
+    if(Math.random()<0.01) targets[s.key]=s.lo+Math.random()*(s.hi-s.lo);
+    values[s.key]+= (targets[s.key]-values[s.key])*0.06 + (Math.random()-0.5)*(s.hi-s.lo)*0.01;
+    values[s.key]=clamp(values[s.key],s.dlo-(s.dhi-s.dlo)*0.05,s.dhi+(s.dhi-s.dlo)*0.05);
+  });
+  render();
+}
+function loop(){ if(playing) stepSim(); setTimeout(loop,900); }
+
+document.getElementById('toggleBtn').addEventListener('click',e=>{
+  playing=!playing; e.target.textContent = playing?'Pause':'Resume';
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  MODEL.sensors.forEach(s=>{ values[s.key]=(s.lo+s.hi)/2; targets[s.key]=values[s.key]; });
+  playing=true; document.getElementById('toggleBtn').textContent='Pause'; render();
+});
+
+render(); loop();
+</script>
+</body>
+</html>
